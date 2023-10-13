@@ -1,0 +1,135 @@
+<html>
+<head>
+<style>
+  body {
+  background-color:#000000;
+}
+ #caption {
+    position:absolute;
+     width:1024px;
+     text-align:center;
+     top:520px;
+     z-index:1
+}
+ #displayCanvas {
+    position:absolute;
+     top:10px;
+     z-index:0;
+}
+ #container {
+    width:1024px;
+     height:576px;
+     margin:auto;
+}
+</style>
+</head>
+<body>
+</head>
+<body>
+<div id="container"> 
+    <canvas id="displayCanvas" width="1024px" height="576px">
+    </canvas>
+    <form> <p id="caption">
+        <input type="button", id="btnGenerate" value="generate"/>
+    	<input type="button", id="btnSave" value="save"/>
+    </p> </form>
+</div>
+</body>
+</html>
+  <script>
+    window.addEventListener("load", () => {
+	const canvas = document.getElementById("displayCanvas");
+	const exportBtn = document.getElementById("btnSave");
+	const regenerateBtn = document.getElementById("btnGenerate");
+	const context = canvas.getContext("2d");
+	const { width, height, maxX, minY, maxY } = { width: canvas.width, height: canvas.height, maxX: canvas.width + 200, minY: canvas.height / 2 - 50, maxY: canvas.height / 2 + 50 };
+	let circles, timer, lineNumber, lineWidth, colorArray;
+  
+	exportBtn.addEventListener("click", () => {
+	  const tempCanvas = Object.assign(document.createElement('canvas'), { width, height });
+	  const tempContext = tempCanvas.getContext("2d");
+	  tempContext.fillStyle = "#000";
+	  tempContext.fillRect(0, 0, width, height);
+	  tempContext.drawImage(canvas, 0, 0);
+	  const a = Object.assign(document.createElement("a"), { href: tempCanvas.toDataURL("image/png"), download: "png.png" }); a.click()});
+  
+	regenerateBtn.addEventListener("click", resetCanvas);
+  
+	init();
+  
+	function init() {
+	  resetCanvas()};
+  
+	function resetCanvas() {
+		context.setTransform(1, 0, 0, 1, 0, 0);
+		context.clearRect(0, 0, width, height);
+		setCircles();
+		[colorArray, lineNumber, timer] = [setColorList(11), 0, setInterval(onTimer, 1000 / 60)]};
+	  
+	function setColorList(iter) {
+	  const randomColor = () => 20 + Math.random() * 80;
+	  const [r0, g0, b0, r1, g1, b1] = Array.from({ length: 6 }, randomColor);
+	  const a = 0.10;
+	  return setLinePoints(iter).map(param => `rgba(${Math.floor(r0 + param * (r1 - r0))},${Math.floor(g0 + param * (g1 - g0))},${Math.floor(b0 + param * (b1 - b0))},${a})`);}
+  
+	function setCircles() {
+		circles = Array.from({ length: 15 }, (_, i) => ({
+		  centerX: -200 + i / 14 * maxX,
+		  centerY: minY + i / 14 * (maxY - minY),
+		  maxRad: 200 + Math.random(),
+		  minRad: 0,
+		  phase: i / 14 * 4.18,
+		  pointArray: setLinePoints(11)}))};
+	  
+	function onTimer() {
+	  for (let k = 0; k < 8; k++) {
+		const theta = lineNumber / 2048 * 6.28;
+		context.globalCompositeOperation = "lighter";
+		context.lineJoin = "miter";
+		context.strokeStyle = colorArray[lineNumber];
+		context.lineWidth = lineWidth;
+		context.beginPath();
+  
+		for (let i = 0; i < circles.length - 1; i++) {
+		  const [rad0, rad1, phase0, phase1] = [circles[i].minRad + circles[i].pointArray[lineNumber] * (circles[i].maxRad - circles[i].minRad), circles[i + 1].minRad + circles[i + 1].pointArray[lineNumber] * (circles[i + 1].maxRad - circles[i + 1].minRad), circles[i].phase, circles[i + 1].phase];
+  
+		  for (let j = 0; j < 53; j++) {
+			const linParam = j / 52;
+			const cosParam = 0.5 - 0.5 * Math.cos(linParam * 3.14);
+			const [centerX, centerY, rad, phase] = [circles[i].centerX + linParam * (circles[i + 1].centerX - circles[i].centerX), circles[i].centerY + cosParam * (circles[i + 1].centerY - circles[i].centerY), rad0 + cosParam * (rad1 - rad0), phase0 + cosParam * (phase1 - phase0)];
+  
+			const [x0, y0] = [centerX + 0.75 * rad * Math.cos(theta + phase), centerY + rad * Math.sin(theta + phase)];
+			context.lineTo(x0, y0); }}
+		context.stroke();
+		lineNumber++;
+		if (lineNumber > 2047) {
+		  clearInterval(timer);
+		  break; }}}
+  
+	function setLinePoints() {
+	  const pointList = { first: { x: 0, y: 1, next: { x: 1, y: 1 } } };
+	  const pointArray = [];
+	  let minY = 1, maxY = 1;
+  
+	  for (let i = 0; i < 11; i++) {
+		let point = pointList.first;
+		while (point.next) {
+		  const next = point.next;
+		  const newX = 0.5 * (point.x + next.x);
+		  const newY = 0.5 * (point.y + next.y) + (next.x - point.x) * (Math.random() * 2 - 1);
+		  minY = Math.min(minY, newY);
+		  maxY = Math.max(maxY, newY);
+		  point.next = { x: newX, y: newY, next: next };
+		  point = next; }}
+	  
+	  const normalizeRate = maxY !== minY ? 1 / (maxY - minY) : 1;
+	  let point = pointList.first;
+	  while (point) {
+		point.y = normalizeRate * (point.y - minY);
+		pointArray.push(point.y);
+		point = point.next };
+
+	  return pointArray; }});
+  </script>
+</body>
+</html>
